@@ -1,16 +1,17 @@
-const express = require("express");
-const jogosRoutes = require("./routes/jogosRoutes");
+import express from "express";
+import jogosRoutes from "./routes/jogosRoutes.js";
 
 const app = express();
-const PORTA = 3000;
+const port = 3000;
 
 // Middleware para o Express entender JSON no corpo das requisições
 app.use(express.json());
 
 // Rota inicial só para confirmar que a API está no ar
 app.get("/", (req, res) => {
-  res.status(200).json({
+  res.json({
     mensagem: "API do Catálogo de Jogos está no ar!",
+    disciplina: "Desenvolvimento de Websites",
     rotasDisponiveis: [
       "GET    /jogos",
       "GET    /jogos/:id",
@@ -29,6 +30,6 @@ app.use((req, res) => {
   res.status(404).json({ erro: "Rota não encontrada." });
 });
 
-app.listen(PORTA, () => {
-  console.log(`Servidor rodando em http://localhost:${PORTA}`);
+app.listen(port, () => {
+  console.log(`Servidor rodando em http://localhost:${port}`);
 });

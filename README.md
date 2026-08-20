@@ -4,9 +4,10 @@ API REST desenvolvida com **Node.js** e **Express**, simulando um sistema de
 catálogo de jogos com armazenamento **em memória** (os dados existem apenas
 enquanto o servidor está rodando).
 
-Projeto desenvolvido para a avaliação **AV1** da disciplina — Servidor Express
-com CRUD em memória. Será evoluído na **AV2** com autenticação, upload de
-arquivos e documentação Swagger.
+Projeto desenvolvido para a avaliação **AV1** — Servidor Express com CRUD em
+memória. Será evoluído na **AV2** com cadastro de usuários, login,
+criptografia de senhas, proteção de rotas, upload de arquivos e documentação
+com Swagger.
 
 ## Tema do projeto
 
@@ -17,14 +18,14 @@ status de conclusão.
 ## Tecnologias utilizadas
 
 - Node.js
-- Express
+- Express 5
 - Armazenamento em memória (array de objetos JavaScript)
 - Insomnia / Postman (para testes das rotas)
 
 ## Estrutura do projeto
 
 ```
-catalogo-jogos-api/
+avp-pedro-anjos-2TIA/
 ├── controllers/
 │   └── jogosController.js   # Lógica das operações de CRUD
 ├── data/
@@ -38,27 +39,21 @@ catalogo-jogos-api/
 
 ## Como executar o projeto
 
-1. Clone o repositório:
-   ```bash
-   git clone <link-do-seu-repositorio>
-   cd catalogo-jogos-api
-   ```
-
-2. Instale as dependências:
+1. Instale as dependências:
    ```bash
    npm install
    ```
 
-3. Inicie o servidor:
+2. Inicie o servidor:
    ```bash
-   node server.js
+   npm start
    ```
-   ou, se quiser reiniciar automaticamente a cada alteração:
+   ou em modo desenvolvimento (reinicia sozinho a cada alteração):
    ```bash
-   npx nodemon server.js
+   npm run dev
    ```
 
-4. O servidor estará disponível em:
+3. O servidor estará disponível em:
    ```
    http://localhost:3000
    ```
@@ -145,5 +140,5 @@ DELETE http://localhost:3000/jogos/1
 
 ## Autor
 
-Nome: _[coloque seu nome aqui]_
-Turma: _[coloque sua turma aqui]_
+Nome: Pedro Anjos
+Turma: 2TIA

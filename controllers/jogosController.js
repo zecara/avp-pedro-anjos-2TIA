@@ -1,12 +1,12 @@
-const { jogos, gerarProximoId } = require("../data/jogos");
+import { jogos, gerarProximoId } from "../data/jogos.js";
 
 // GET /jogos -> lista todos os jogos cadastrados
-function listarJogos(req, res) {
-  return res.status(200).json(jogos);
+export function listarJogos(req, res) {
+  res.status(200).json(jogos);
 }
 
 // GET /jogos/:id -> consulta um jogo específico pelo ID
-function buscarJogoPorId(req, res) {
+export function buscarJogoPorId(req, res) {
   const id = Number(req.params.id);
   const jogo = jogos.find((j) => j.id === id);
 
@@ -14,11 +14,11 @@ function buscarJogoPorId(req, res) {
     return res.status(404).json({ erro: `Jogo com ID ${id} não encontrado.` });
   }
 
-  return res.status(200).json(jogo);
+  res.status(200).json(jogo);
 }
 
 // POST /jogos -> cadastra um novo jogo
-function cadastrarJogo(req, res) {
+export function cadastrarJogo(req, res) {
   const { titulo, genero, plataforma, anoLancamento, nota, concluido } = req.body;
 
   if (!titulo || !genero || !plataforma) {
@@ -39,14 +39,14 @@ function cadastrarJogo(req, res) {
 
   jogos.push(novoJogo);
 
-  return res.status(201).json({
+  res.status(201).json({
     mensagem: "Jogo cadastrado com sucesso.",
     jogo: novoJogo,
   });
 }
 
 // PUT /jogos/:id -> edita um jogo existente
-function editarJogo(req, res) {
+export function editarJogo(req, res) {
   const id = Number(req.params.id);
   const jogo = jogos.find((j) => j.id === id);
 
@@ -63,14 +63,14 @@ function editarJogo(req, res) {
   if (nota !== undefined) jogo.nota = nota;
   if (concluido !== undefined) jogo.concluido = concluido;
 
-  return res.status(200).json({
+  res.status(200).json({
     mensagem: "Jogo atualizado com sucesso.",
     jogo,
   });
 }
 
 // DELETE /jogos/:id -> remove um jogo pelo ID
-function excluirJogo(req, res) {
+export function excluirJogo(req, res) {
   const id = Number(req.params.id);
   const indice = jogos.findIndex((j) => j.id === id);
 
@@ -80,16 +80,8 @@ function excluirJogo(req, res) {
 
   const [jogoRemovido] = jogos.splice(indice, 1);
 
-  return res.status(200).json({
+  res.status(200).json({
     mensagem: "Jogo removido com sucesso.",
     jogo: jogoRemovido,
   });
 }
-
-module.exports = {
-  listarJogos,
-  buscarJogoPorId,
-  cadastrarJogo,
-  editarJogo,
-  excluirJogo,
-};
