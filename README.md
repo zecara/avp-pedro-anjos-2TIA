@@ -63,17 +63,39 @@ avp-pedro-anjos-2TIA/
 ```json
 {
   "id": 1,
-  "titulo": "The Legend of Zelda: Breath of the Wild",
-  "genero": "Aventura",
-  "plataforma": "Nintendo Switch",
-  "anoLancamento": 2017,
-  "nota": 9.7,
+  "titulo": "Red Dead Redemption",
+  "genero": "Ação/Aventura",
+  "plataforma": "PS4",
+  "anoLancamento": 2010,
+  "nota": 9.6,
   "concluido": true
 }
 ```
 
 O campo `id` é gerado automaticamente pelo servidor — não deve ser enviado
 no corpo da requisição ao cadastrar um jogo.
+
+## Jogos pré-cadastrados
+
+Ao iniciar, a API carrega estes jogos no array em memória de
+`data/jogos.js`:
+
+| Título                  | Gênero               | Plataforma | Ano |
+|-------------------------|----------------------|------------|-----|
+| Red Dead Redemption     | Ação/Aventura        | PS4        | 2010 |
+| Red Dead Redemption 2   | Ação/Aventura        | PS5        | 2018 |
+| Stardew Valley          | Simulação            | PC         | 2016 |
+| Shadow of the Colossus  | Aventura             | PS4        | 2018 |
+| God of War Ragnarök     | Ação                 | PS5        | 2022 |
+| The Last of Us Part II  | Ação/Sobrevivência   | PS5        | 2020 |
+
+## Organização da arquitetura
+
+O projeto separa as responsabilidades em três partes: `routes/` define os
+endereços e métodos HTTP, `controllers/` concentra a lógica do CRUD e das
+respostas, e `data/` mantém o array em memória e o gerador de IDs. O
+`server.js` configura o Express, o middleware JSON e o agrupamento das rotas
+em `/jogos`, deixando cada arquivo com uma responsabilidade clara.
 
 ## Rotas disponíveis
 
@@ -84,6 +106,180 @@ no corpo da requisição ao cadastrar um jogo.
 | POST   | `/jogos`      | Cadastra um novo jogo                   |
 | PUT    | `/jogos/:id`  | Edita um jogo existente                 |
 | DELETE | `/jogos/:id`  | Remove um jogo pelo ID                  |
+
+### `GET /jogos`
+
+- Corpo da requisição: não se aplica; a rota não exige campos.
+- Sucesso: `200 OK`.
+- Erro: não há erro de validação ou de ID nessa rota.
+
+Resposta de sucesso:
+
+```json
+[
+  {
+    "id": 1,
+    "titulo": "Red Dead Redemption",
+    "genero": "Ação/Aventura",
+    "plataforma": "PS4",
+    "anoLancamento": 2010,
+    "nota": 9.6,
+    "concluido": true
+  }
+]
+```
+
+O array retornado contém todos os jogos cadastrados, não apenas o exemplo
+acima.
+
+### `GET /jogos/:id`
+
+- Corpo da requisição: não se aplica; a rota não exige campos.
+- Sucesso: `200 OK`.
+- Erro: `404 Not Found` quando o ID não é encontrado.
+
+Resposta de sucesso para `/jogos/1`:
+
+```json
+{
+  "id": 1,
+  "titulo": "Red Dead Redemption",
+  "genero": "Ação/Aventura",
+  "plataforma": "PS4",
+  "anoLancamento": 2010,
+  "nota": 9.6,
+  "concluido": true
+}
+```
+
+Resposta de erro para `/jogos/999`:
+
+```json
+{
+  "erro": "Jogo com ID 999 não encontrado."
+}
+```
+
+### `POST /jogos`
+
+- Campos obrigatórios: `titulo`, `genero` e `plataforma`.
+- Campos opcionais: `anoLancamento`, `nota` e `concluido`.
+- Sucesso: `201 Created`.
+- Erro: `400 Bad Request` quando falta um campo obrigatório.
+
+Resposta de sucesso:
+
+```json
+{
+  "mensagem": "Jogo cadastrado com sucesso.",
+  "jogo": {
+    "id": 7,
+    "titulo": "Elden Ring",
+    "genero": "RPG",
+    "plataforma": "PC",
+    "anoLancamento": 2022,
+    "nota": 9.8,
+    "concluido": false
+  }
+}
+```
+
+Resposta de erro:
+
+```json
+{
+  "erro": "Os campos 'titulo', 'genero' e 'plataforma' são obrigatórios."
+}
+```
+
+Quando os campos opcionais não são enviados, `anoLancamento` e `nota` recebem
+`null`, e `concluido` recebe `false`.
+
+### `PUT /jogos/:id`
+
+- Corpo da requisição: todos os campos são opcionais; somente os campos
+  enviados são alterados. Os campos aceitos são `titulo`, `genero`,
+  `plataforma`, `anoLancamento`, `nota` e `concluido`.
+- Sucesso: `200 OK`.
+- Erro: `404 Not Found` quando o ID não é encontrado.
+
+Resposta de sucesso para `/jogos/1`:
+
+```json
+{
+  "mensagem": "Jogo atualizado com sucesso.",
+  "jogo": {
+    "id": 1,
+    "titulo": "Red Dead Redemption",
+    "genero": "Ação/Aventura",
+    "plataforma": "PS4",
+    "anoLancamento": 2010,
+    "nota": 10,
+    "concluido": true
+  }
+}
+```
+
+Resposta de erro para `/jogos/999`:
+
+```json
+{
+  "erro": "Jogo com ID 999 não encontrado."
+}
+```
+
+### `DELETE /jogos/:id`
+
+- Corpo da requisição: não se aplica; a rota não exige campos.
+- Sucesso: `200 OK`.
+- Erro: `404 Not Found` quando o ID não é encontrado.
+
+Resposta de sucesso para `/jogos/1`:
+
+```json
+{
+  "mensagem": "Jogo removido com sucesso.",
+  "jogo": {
+    "id": 1,
+    "titulo": "Red Dead Redemption",
+    "genero": "Ação/Aventura",
+    "plataforma": "PS4",
+    "anoLancamento": 2010,
+    "nota": 9.6,
+    "concluido": true
+  }
+}
+```
+
+Resposta de erro para `/jogos/999`:
+
+```json
+{
+  "erro": "Jogo com ID 999 não encontrado."
+}
+```
+
+## Erros comuns
+
+### `400 Bad Request` — validação
+
+Ocorre no cadastro quando `titulo`, `genero` ou `plataforma` não é enviado:
+
+```json
+{
+  "erro": "Os campos 'titulo', 'genero' e 'plataforma' são obrigatórios."
+}
+```
+
+### `404 Not Found` — jogo não encontrado
+
+Ocorre ao consultar, editar ou excluir um ID que não existe:
+
+```json
+{
+  "erro": "Jogo com ID 999 não encontrado."
+}
+```
 
 ## Exemplos de teste no Insomnia / Postman
 
