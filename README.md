@@ -99,19 +99,32 @@ em `/jogos`, deixando cada arquivo com uma responsabilidade clara.
 
 ## Rotas disponíveis
 
-| Método | Rota          | Descrição                              |
-|--------|---------------|-----------------------------------------|
-| GET    | `/jogos`      | Lista todos os jogos cadastrados        |
-| GET    | `/jogos/:id`  | Consulta um jogo específico pelo ID     |
-| POST   | `/jogos`      | Cadastra um novo jogo                   |
-| PUT    | `/jogos/:id`  | Edita um jogo existente                 |
-| DELETE | `/jogos/:id`  | Remove um jogo pelo ID                  |
+| Método | Rota                    | Descrição                                  |
+|--------|-------------------------|-------------------------------------------|
+| GET    | `/jogos`                | Lista todos os jogos cadastrados           |
+| GET    | `/jogos/estatisticas`   | Retorna um resumo dos dados em memória     |
+| GET    | `/jogos/:id`            | Consulta um jogo específico pelo ID        |
+| POST   | `/jogos`                | Cadastra um novo jogo                      |
+| PUT    | `/jogos/:id`            | Edita um jogo existente                    |
+| DELETE | `/jogos/:id`            | Remove um jogo pelo ID                     |
 
 ### `GET /jogos`
 
-- Corpo da requisição: não se aplica; a rota não exige campos.
-- Sucesso: `200 OK`.
-- Erro: não há erro de validação ou de ID nessa rota.
+Além dos dados brutos, esta rota aceita filtros e ordenação por query string:
+
+- `?genero=RPG` -> filtra por gênero de forma case-insensitive e parcial.
+- `?concluido=true` ou `?concluido=false` -> filtra por status de conclusão.
+- `?ordenarPor=nota` -> ordena por `titulo`, `anoLancamento` ou `nota`.
+
+Exemplos:
+
+```bash
+GET /jogos?genero=rpg
+GET /jogos?concluido=false&ordenarPor=nota
+GET /jogos?genero=acao&concluido=true&ordenarPor=anoLancamento
+```
+
+Se a query string não for informada, a rota continua retornando todos os jogos.
 
 Resposta de sucesso:
 
@@ -131,6 +144,49 @@ Resposta de sucesso:
 
 O array retornado contém todos os jogos cadastrados, não apenas o exemplo
 acima.
+
+### `GET /jogos/estatisticas`
+
+Retorna um resumo calculado a partir dos dados em memória.
+
+Exemplo de resposta:
+
+```json
+{
+  "totalJogos": 6,
+  "quantidadeConcluidos": 4,
+  "quantidadeNaoConcluidos": 2,
+  "notaMedia": 9.4,
+  "generoMaisFrequente": "Ação/Aventura"
+}
+```
+
+### Regras de validação atualizadas
+
+Nos cadastros e edições, os campos opcionais passam a ser validados somente
+quando forem enviados pelo cliente.
+
+- `anoLancamento`: deve ser um número inteiro entre `1970` e `anoAtual + 1`.
+- `nota`: deve ser um número entre `0` e `10`.
+- `concluido`: deve ser estritamente booleano (`true` ou `false`).
+
+Qualquer valor com tipo ou formato inválido retorna `400 Bad Request` com
+resposta no formato:
+
+```json
+{
+  "erro": "Mensagem clara indicando o campo inválido."
+}
+```
+
+### Middleware de log
+
+O servidor registra cada requisição no console com o método HTTP, a rota e o
+horário em formato ISO, por exemplo:
+
+```text
+[2026-08-22T14:30:00.000Z] GET /jogos
+```
 
 ### `GET /jogos/:id`
 
