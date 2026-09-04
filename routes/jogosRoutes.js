@@ -7,7 +7,7 @@ import {
   editarJogo,
   excluirJogo,
 } from "../controllers/jogosController.js";
-import { autenticarToken } from "../middleware/authMiddleware.js";
+import { autenticarToken } from "../middlewares/authMiddleware.js";
 
 const router = Router();
 
@@ -69,6 +69,20 @@ router.get("/:id", buscarJogoPorId);
  *     tags: [Jogos]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [titulo, genero, plataforma]
+ *             properties:
+ *               titulo: { type: string }
+ *               genero: { type: string }
+ *               plataforma: { type: string }
+ *               anoLancamento: { type: integer }
+ *               nota: { type: number, minimum: 0, maximum: 10 }
+ *               concluido: { type: boolean }
  *     responses:
  *       201:
  *         description: Jogo cadastrado
@@ -89,6 +103,17 @@ router.post("/", cadastrarJogo);
  *         required: true
  *         schema:
  *           type: integer
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               titulo: { type: string }
+ *               genero: { type: string }
+ *               plataforma: { type: string }
+ *               nota: { type: number, minimum: 0, maximum: 10 }
+ *               concluido: { type: boolean }
  *     responses:
  *       200:
  *         description: Jogo atualizado

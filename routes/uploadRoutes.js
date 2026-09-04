@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { upload } from "../middleware/uploadMiddleware.js";
-import { autenticarToken } from "../middleware/authMiddleware.js";
+import { upload } from "../middlewares/uploadMiddleware.js";
+import { autenticarToken } from "../middlewares/authMiddleware.js";
 
 const router = Router();
 

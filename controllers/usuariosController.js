@@ -42,6 +42,26 @@ export async function cadastrarUsuario(req, res) {
   });
 }
 
+/**
+ * @openapi
+ * /login:
+ *   post:
+ *     summary: Fazer login
+ *     tags: [Autenticação]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, senha]
+ *             properties:
+ *               email: { type: string, format: email }
+ *               senha: { type: string, format: password }
+ *     responses:
+ *       200: { description: Login realizado e token JWT retornado }
+ *       401: { description: Credenciais inválidas }
+ */
 export async function fazerLogin(req, res) {
   const { email, senha } = req.body;
 

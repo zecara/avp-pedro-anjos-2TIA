@@ -9,13 +9,16 @@ export function autenticarToken(req, res, next) {
     return res.status(401).json({ erro: "Token de autenticação ausente." });
   }
 
-  const token = cabecalho.split(" ")[1];
+  const token = cabecalho.slice(7).trim();
+
+  if (!token) {
+    return res.status(401).json({ erro: "Token de autenticação ausente." });
+  }
 
   try {
-    const dadosToken = jwt.verify(token, segredoJwt);
-    req.usuario = dadosToken;
+    req.usuario = jwt.verify(token, segredoJwt);
     return next();
-  } catch (error) {
+  } catch {
     return res.status(401).json({ erro: "Token inválido ou expirado." });
   }
 }

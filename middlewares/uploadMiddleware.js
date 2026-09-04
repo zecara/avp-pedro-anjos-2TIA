@@ -12,21 +12,18 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, callback) => {
-    callback(null, uploadsDir);
-  },
+  destination: (_req, _file, callback) => callback(null, uploadsDir),
   filename: (_req, file, callback) => {
-    const extensao = path.extname(file.originalname);
-    const nomeArquivo = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extensao}`;
-    callback(null, nomeArquivo);
+    const extensao = path.extname(file.originalname).toLowerCase();
+    callback(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${extensao}`);
   },
 });
 
-const fileFilter = (_req, file, callback) => {
-  const tiposPermitidos = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+const tiposPermitidos = ["image/jpeg", "image/png", "image/webp"];
 
+const fileFilter = (_req, file, callback) => {
   if (!tiposPermitidos.includes(file.mimetype)) {
-    return callback(new Error("Tipo de arquivo inválido. Use apenas JPG, PNG ou WEBP."));
+    return callback(new Error("Tipo de arquivo inválido. Use apenas JPG, JPEG, PNG ou WEBP."));
   }
 
   callback(null, true);
@@ -34,8 +31,6 @@ const fileFilter = (_req, file, callback) => {
 
 export const upload = multer({
   storage,
-  limits: {
-    fileSize: 2 * 1024 * 1024,
-  },
+  limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter,
 });

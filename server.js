@@ -1,8 +1,9 @@
+import "dotenv/config";
 import express from "express";
 import jogosRoutes from "./routes/jogosRoutes.js";
 import usuariosRoutes from "./routes/usuariosRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
-import { configurarSwagger } from "./swagger.js";
+import { configurarSwagger, swaggerSpec } from "./swagger.js";
 import { fazerLogin } from "./controllers/usuariosController.js";
 import { registrarLog } from "./middlewares/logMiddleware.js";
 
@@ -38,6 +39,9 @@ app.use("/jogos", jogosRoutes);
 app.use("/upload", uploadRoutes);
 app.use("/uploads", express.static("uploads"));
 configurarSwagger(app);
+app.get("/api-docs/swagger.json", (req, res) => {
+  res.json(swaggerSpec);
+});
 
 app.use((req, res) => {
   res.status(404).json({ erro: "Rota não encontrada." });
