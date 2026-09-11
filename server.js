@@ -25,7 +25,7 @@ app.get("/", (req, res) => {
       "GET    /jogos/estatisticas",
       "GET    /jogos/:id",
       "POST   /jogos",
-      "PUT    /jogos/:id",
+      "PATCH  /jogos/:id",
       "DELETE /jogos/:id",
       "POST   /upload",
       "GET    /api-docs",

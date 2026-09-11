@@ -117,7 +117,7 @@ documentação OpenAPI.
 | GET    | `/jogos/estatisticas`   | Retorna um resumo dos dados em memória     |
 | GET    | `/jogos/:id`            | Consulta um jogo específico pelo ID        |
 | POST   | `/jogos`                | Cadastra um novo jogo                      |
-| PUT    | `/jogos/:id`            | Edita um jogo existente                    |
+| PATCH  | `/jogos/:id`            | Edita um jogo existente                    |
 | DELETE | `/jogos/:id`            | Remove um jogo pelo ID                     |
 | POST   | `/upload`               | Envia uma imagem                            |
 | GET    | `/api-docs`             | Abre a documentação interativa             |
@@ -286,7 +286,7 @@ Resposta de erro:
 Quando os campos opcionais não são enviados, `anoLancamento` e `nota` recebem
 `null`, e `concluido` recebe `false`.
 
-### `PUT /jogos/:id`
+### `PATCH /jogos/:id`
 
 - Corpo da requisição: todos os campos são opcionais; somente os campos
   enviados são alterados. Os campos aceitos são `titulo`, `genero`,
@@ -407,7 +407,7 @@ Authorization: Bearer SEU_TOKEN
 
 ### 4. Editar um jogo existente
 ```
-PUT http://localhost:3000/jogos/1
+PATCH http://localhost:3000/jogos/1
 Content-Type: application/json
 Authorization: Bearer SEU_TOKEN
 

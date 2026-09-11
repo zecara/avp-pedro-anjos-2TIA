@@ -188,7 +188,7 @@ export function cadastrarJogo(req, res) {
   });
 }
 
-// PUT /jogos/:id -> edita um jogo existente
+// PATCH /jogos/:id -> edita um jogo existente
 export function editarJogo(req, res) {
   const id = Number(req.params.id);
   const jogo = jogos.find((j) => j.id === id);

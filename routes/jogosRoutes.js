@@ -92,7 +92,7 @@ router.post("/", cadastrarJogo);
 /**
  * @openapi
  * /jogos/{id}:
- *   put:
+ *   patch:
  *     summary: Editar jogo
  *     tags: [Jogos]
  *     security:
@@ -118,7 +118,7 @@ router.post("/", cadastrarJogo);
  *       200:
  *         description: Jogo atualizado
  */
-router.put("/:id", editarJogo);
+router.patch("/:id", editarJogo);
 
 /**
  * @openapi
