@@ -33,6 +33,33 @@ app.get("/", (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /login:
+ *   post:
+ *     summary: Autenticar usuário
+ *     description: Retorna um token JWT para acessar as rotas protegidas da API.
+ *     tags: [Autenticação]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, senha]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               senha:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Login realizado com sucesso
+ *       401:
+ *         description: E-mail ou senha inválidos
+ */
 app.use("/usuarios", usuariosRoutes);
 app.post("/login", fazerLogin);
 app.use("/jogos", jogosRoutes);

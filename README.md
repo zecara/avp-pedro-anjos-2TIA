@@ -1,13 +1,9 @@
 # Catálogo de Jogos API
 
-API REST desenvolvida com **Node.js** e **Express**, simulando um sistema de
-catálogo de jogos com armazenamento **em memória** (os dados existem apenas
-enquanto o servidor está rodando).
-
-Projeto desenvolvido para a avaliação **AV1** — Servidor Express com CRUD em
-memória. Será evoluído na **AV2** com cadastro de usuários, login,
-criptografia de senhas, proteção de rotas, upload de arquivos e documentação
-com Swagger.
+API REST desenvolvida com **Node.js** e **Express** para gerenciar um catálogo
+de jogos com armazenamento **em memória**. O projeto inclui cadastro de
+usuários, login com token JWT, proteção de rotas, upload de imagens e
+documentação interativa com Swagger.
 
 ## Tema do projeto
 
@@ -19,6 +15,10 @@ status de conclusão.
 
 - Node.js
 - Express 5
+- JSON Web Token (`jsonwebtoken`)
+- Criptografia de senhas com `bcrypt`
+- Upload de arquivos com `multer`
+- Documentação com `swagger-jsdoc` e `swagger-ui-express`
 - Armazenamento em memória (array de objetos JavaScript)
 - Insomnia / Postman (para testes das rotas)
 
@@ -27,12 +27,21 @@ status de conclusão.
 ```
 avp-pedro-anjos-2TIA/
 ├── controllers/
-│   └── jogosController.js   # Lógica das operações de CRUD
+│   ├── jogosController.js   # Lógica do catálogo
+│   └── usuariosController.js # Cadastro e login
+├── middlewares/
+│   ├── authMiddleware.js    # Validação do token JWT
+│   ├── logMiddleware.js     # Registro das requisições
+│   └── uploadMiddleware.js  # Validação do upload
 ├── data/
-│   └── jogos.js              # "Banco de dados" em memória + gerador de ID
+│   ├── jogos.js              # Jogos e gerador de IDs
+│   └── usuarios.js           # Usuários e gerador de IDs
 ├── routes/
-│   └── jogosRoutes.js        # Definição das rotas de /jogos
+│   ├── jogosRoutes.js        # Rotas protegidas de /jogos
+│   ├── usuariosRoutes.js     # Rota de cadastro
+│   └── uploadRoutes.js        # Rota de upload
 ├── server.js                 # Arquivo principal, inicia o servidor Express
+├── swagger.js                # Configuração da documentação OpenAPI
 ├── package.json
 └── README.md
 ```
@@ -91,22 +100,48 @@ Ao iniciar, a API carrega estes jogos no array em memória de
 
 ## Organização da arquitetura
 
-O projeto separa as responsabilidades em três partes: `routes/` define os
-endereços e métodos HTTP, `controllers/` concentra a lógica do CRUD e das
-respostas, e `data/` mantém o array em memória e o gerador de IDs. O
-`server.js` configura o Express, o middleware JSON e o agrupamento das rotas
-em `/jogos`, deixando cada arquivo com uma responsabilidade clara.
+O projeto separa as responsabilidades por camadas: `routes/` define os
+endereços e métodos HTTP, `controllers/` concentra as regras de negócio,
+`middlewares/` cuida de autenticação, logs e upload, e `data/` mantém os dados
+em memória e os geradores de IDs. O `server.js` configura o Express, os
+middlewares globais e o agrupamento das rotas, enquanto `swagger.js` expõe a
+documentação OpenAPI.
 
 ## Rotas disponíveis
 
 | Método | Rota                    | Descrição                                  |
 |--------|-------------------------|-------------------------------------------|
+| POST   | `/usuarios`             | Cadastra um usuário                        |
+| POST   | `/login`                | Autentica e retorna um token JWT            |
 | GET    | `/jogos`                | Lista todos os jogos cadastrados           |
 | GET    | `/jogos/estatisticas`   | Retorna um resumo dos dados em memória     |
 | GET    | `/jogos/:id`            | Consulta um jogo específico pelo ID        |
 | POST   | `/jogos`                | Cadastra um novo jogo                      |
 | PUT    | `/jogos/:id`            | Edita um jogo existente                    |
 | DELETE | `/jogos/:id`            | Remove um jogo pelo ID                     |
+| POST   | `/upload`               | Envia uma imagem                            |
+| GET    | `/api-docs`             | Abre a documentação interativa             |
+
+As rotas de `/jogos` e `/upload` exigem o cabeçalho:
+
+```text
+Authorization: Bearer SEU_TOKEN
+```
+
+### Cadastro e login
+
+Crie um usuário com `POST /usuarios`:
+
+```json
+{
+  "nome": "Pedro Anjos",
+  "email": "pedro@example.com",
+  "senha": "senha123"
+}
+```
+
+Depois, faça `POST /login` com o mesmo e-mail e senha. A resposta contém o
+campo `token`, válido por uma hora, que deve ser enviado nas rotas protegidas.
 
 ### `GET /jogos`
 
@@ -339,20 +374,26 @@ Ocorre ao consultar, editar ou excluir um ID que não existe:
 
 ## Exemplos de teste no Insomnia / Postman
 
+Antes de testar as rotas protegidas, faça login e configure o token retornado
+como Bearer Token no Insomnia ou Postman.
+
 ### 1. Listar todos os jogos
 ```
 GET http://localhost:3000/jogos
+Authorization: Bearer SEU_TOKEN
 ```
 
 ### 2. Consultar um jogo pelo ID
 ```
 GET http://localhost:3000/jogos/1
+Authorization: Bearer SEU_TOKEN
 ```
 
 ### 3. Cadastrar um novo jogo
 ```
 POST http://localhost:3000/jogos
 Content-Type: application/json
+Authorization: Bearer SEU_TOKEN
 
 {
   "titulo": "Elden Ring",
@@ -368,6 +409,7 @@ Content-Type: application/json
 ```
 PUT http://localhost:3000/jogos/1
 Content-Type: application/json
+Authorization: Bearer SEU_TOKEN
 
 {
   "concluido": true,
@@ -379,6 +421,29 @@ Content-Type: application/json
 ### 5. Excluir um jogo
 ```
 DELETE http://localhost:3000/jogos/1
+Authorization: Bearer SEU_TOKEN
+```
+
+### 6. Enviar uma imagem
+
+```text
+POST http://localhost:3000/upload
+Authorization: Bearer SEU_TOKEN
+Campo multipart/form-data: imagem (arquivo)
+```
+
+## Documentação Swagger
+
+Com o servidor em execução, acesse:
+
+```text
+http://localhost:3000/api-docs
+```
+
+Também é possível consultar o documento OpenAPI em:
+
+```text
+http://localhost:3000/api-docs/swagger.json
 ```
 
 ## Observações
@@ -386,8 +451,12 @@ DELETE http://localhost:3000/jogos/1
 - Os dados são armazenados apenas em memória (array), portanto são
   perdidos sempre que o servidor é reiniciado.
 - Todas as respostas são retornadas em formato JSON.
+- O token JWT expira após uma hora e usa `JWT_SECRET` quando essa variável é
+  definida; caso contrário, o projeto usa um segredo padrão para desenvolvimento.
+- Uploads aceitam JPG/JPEG, PNG ou WEBP de até 2 MB e ficam disponíveis em
+  `/uploads`.
 - Erros (ex: ID inexistente, campos obrigatórios faltando) retornam um
-  código de status apropriado (`400` ou `404`) junto de uma mensagem
+  código de status apropriado (`400`, `401`, `404` ou `409`) junto de uma mensagem
   explicativa.
 
 ## Autor
