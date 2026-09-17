@@ -2,7 +2,11 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { usuarios, gerarProximoUsuarioId } from "../data/usuarios.js";
 
-const segredoJwt = process.env.JWT_SECRET || "segredo-av2-jogos";
+const segredoJwt = process.env.JWT_SECRET;
+
+if (!segredoJwt) {
+  throw new Error("JWT_SECRET não configurada. Defina a variável de ambiente no arquivo .env.");
+}
 
 export async function cadastrarUsuario(req, res) {
   const { nome, email, senha } = req.body;

@@ -1,6 +1,10 @@
 import jwt from "jsonwebtoken";
 
-const segredoJwt = process.env.JWT_SECRET || "segredo-av2-jogos";
+const segredoJwt = process.env.JWT_SECRET;
+
+if (!segredoJwt) {
+  throw new Error("JWT_SECRET não configurada. Defina a variável de ambiente no arquivo .env.");
+}
 
 export function autenticarToken(req, res, next) {
   const cabecalho = req.headers.authorization;
