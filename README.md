@@ -40,20 +40,36 @@ avp-pedro-anjos-2TIA/
 │   ├── jogosRoutes.js        # Rotas protegidas de /jogos
 │   ├── usuariosRoutes.js     # Rota de cadastro
 │   └── uploadRoutes.js        # Rota de upload
+├── scripts/
+│   └── setup.js               # Gera configuração local segura
 ├── server.js                 # Arquivo principal, inicia o servidor Express
 ├── swagger.js                # Configuração da documentação OpenAPI
+├── .env.example
+├── package-lock.json
 ├── package.json
 └── README.md
 ```
 
 ## Como executar o projeto
 
-1. Instale as dependências:
+Requisitos: Node.js 18 ou superior e npm.
+
+1. Clone o repositório e entre na pasta:
    ```bash
-   npm install
+  git clone https://github.com/zecara/avp-pedro-anjos-2TIA.git
+  cd avp-pedro-anjos-2TIA
    ```
 
-2. Inicie o servidor:
+2. Instale exatamente as dependências registradas no lockfile e configure o
+  ambiente local:
+  ```bash
+  npm ci
+  npm run setup
+  ```
+  O setup cria `.env` com uma chave JWT aleatória e não sobrescreve um arquivo
+  `.env` existente. Para configurar manualmente, use `.env.example` como base.
+
+3. Inicie o servidor:
    ```bash
    npm start
    ```
@@ -62,10 +78,11 @@ avp-pedro-anjos-2TIA/
    npm run dev
    ```
 
-3. O servidor estará disponível em:
+4. O servidor estará disponível em:
    ```
    http://localhost:3000
    ```
+    Execute `npm test` para rodar os testes automatizados.
 
 ## Estrutura de um jogo (objeto)
 
@@ -86,8 +103,8 @@ no corpo da requisição ao cadastrar um jogo.
 
 ## Jogos pré-cadastrados
 
-Ao iniciar, a API carrega estes jogos no array em memória de
-`data/jogos.js`:
+Ao iniciar, a API carrega 18 jogos no array em memória de
+`data/jogos.js`. A tabela abaixo mostra alguns deles:
 
 | Título                  | Gênero               | Plataforma | Ano |
 |-------------------------|----------------------|------------|-----|
@@ -188,9 +205,9 @@ Exemplo de resposta:
 
 ```json
 {
-  "totalJogos": 6,
-  "quantidadeConcluidos": 4,
-  "quantidadeNaoConcluidos": 2,
+  "totalJogos": 18,
+  "quantidadeConcluidos": 8,
+  "quantidadeNaoConcluidos": 10,
   "notaMedia": 9.4,
   "generoMaisFrequente": "Ação/Aventura"
 }
@@ -264,7 +281,7 @@ Resposta de sucesso:
 {
   "mensagem": "Jogo cadastrado com sucesso.",
   "jogo": {
-    "id": 7,
+    "id": 19,
     "titulo": "Elden Ring",
     "genero": "RPG",
     "plataforma": "PC",
@@ -451,8 +468,8 @@ http://localhost:3000/api-docs/swagger.json
 - Os dados são armazenados apenas em memória (array), portanto são
   perdidos sempre que o servidor é reiniciado.
 - Todas as respostas são retornadas em formato JSON.
-- O token JWT expira após uma hora e usa `JWT_SECRET` quando essa variável é
-  definida; caso contrário, o projeto usa um segredo padrão para desenvolvimento.
+- O token JWT expira após uma hora. `JWT_SECRET` é criada localmente por
+  `npm run setup`; não compartilhe nem versione o arquivo `.env`.
 - Uploads aceitam JPG/JPEG, PNG ou WEBP de até 2 MB e ficam disponíveis em
   `/uploads`.
 - Erros (ex: ID inexistente, campos obrigatórios faltando) retornam um

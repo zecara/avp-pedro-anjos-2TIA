@@ -8,7 +8,7 @@ import { fazerLogin } from "./controllers/usuariosController.js";
 import { registrarLog } from "./middlewares/logMiddleware.js";
 
 const app = express();
-const port = 3000;
+const port = Number(process.env.PORT) || 3000;
 
 app.use(registrarLog);
 app.use(express.json());
@@ -76,6 +76,14 @@ app.use((req, res) => {
 
 app.use((error, req, res, next) => {
   if (error) {
+    if (error.type === "entity.parse.failed") {
+      return res.status(400).json({ erro: "O corpo da requisição contém JSON inválido." });
+    }
+
+    if (error.type === "entity.too.large") {
+      return res.status(413).json({ erro: "O corpo da requisição é muito grande." });
+    }
+
     if (error.name === "MulterError") {
       if (error.code === "LIMIT_FILE_SIZE") {
         return res.status(400).json({ erro: "Arquivo muito grande. O tamanho máximo é 2MB." });

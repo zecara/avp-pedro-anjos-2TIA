@@ -9,16 +9,17 @@ if (!segredoJwt) {
 }
 
 export async function cadastrarUsuario(req, res) {
-  const { nome, email, senha } = req.body;
+  const { nome, email, senha } = req.body ?? {};
 
-  if (!nome || !email || !senha) {
+  if ([nome, email, senha].some((valor) => typeof valor !== "string" || valor.trim() === "")) {
     return res.status(400).json({
-      erro: "Os campos 'nome', 'email' e 'senha' são obrigatórios.",
+      erro: "Os campos 'nome', 'email' e 'senha' são obrigatórios e devem ser strings válidas.",
     });
   }
 
+  const emailNormalizado = email.trim().toLowerCase();
   const emailExistente = usuarios.find(
-    (usuario) => usuario.email.toLowerCase() === email.toLowerCase()
+    (usuario) => usuario.email.toLowerCase() === emailNormalizado
   );
 
   if (emailExistente) {
@@ -29,8 +30,8 @@ export async function cadastrarUsuario(req, res) {
 
   const novoUsuario = {
     id: gerarProximoUsuarioId(),
-    nome,
-    email,
+    nome: nome.trim(),
+    email: email.trim(),
     senha: senhaCriptografada,
   };
 
@@ -67,16 +68,17 @@ export async function cadastrarUsuario(req, res) {
  *       401: { description: Credenciais inválidas }
  */
 export async function fazerLogin(req, res) {
-  const { email, senha } = req.body;
+  const { email, senha } = req.body ?? {};
 
-  if (!email || !senha) {
+  if ([email, senha].some((valor) => typeof valor !== "string" || valor.trim() === "")) {
     return res.status(400).json({
-      erro: "Os campos 'email' e 'senha' são obrigatórios.",
+      erro: "Os campos 'email' e 'senha' são obrigatórios e devem ser strings válidas.",
     });
   }
 
+  const emailNormalizado = email.trim().toLowerCase();
   const usuario = usuarios.find(
-    (item) => item.email.toLowerCase() === email.toLowerCase()
+    (item) => item.email.toLowerCase() === emailNormalizado
   );
 
   if (!usuario) {

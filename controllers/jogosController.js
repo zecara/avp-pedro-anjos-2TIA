@@ -12,8 +12,8 @@ function validarCampoObrigatorio(req, res, nomeCampo, valor) {
   return null;
 }
 
-function validarCamposOpcionais(req, res) {
-  const { anoLancamento, nota, concluido } = req.body;
+function validarCamposOpcionais(body, res) {
+  const { anoLancamento, nota, concluido } = body;
 
   if (anoLancamento !== undefined) {
     if (!Number.isInteger(anoLancamento) || anoLancamento < 1970 || anoLancamento > anoAtual + 1) {
@@ -66,15 +66,20 @@ export function listarJogos(req, res) {
 
   if (ordenarPor !== undefined) {
     const campoOrdenacao = String(ordenarPor).trim().toLowerCase();
-    const camposOrdenacaoValidos = ["titulo", "anoLancamento", "nota"];
+    const camposOrdenacaoValidos = {
+      titulo: "titulo",
+      anolancamento: "anoLancamento",
+      nota: "nota",
+    };
 
-    if (camposOrdenacaoValidos.includes(campoOrdenacao)) {
+    if (camposOrdenacaoValidos[campoOrdenacao]) {
+      const propriedade = camposOrdenacaoValidos[campoOrdenacao];
       jogosFiltrados.sort((jogoA, jogoB) => {
-        if (campoOrdenacao === "titulo") {
+        if (propriedade === "titulo") {
           return String(jogoA.titulo).localeCompare(String(jogoB.titulo));
         }
 
-        return Number(jogoA[campoOrdenacao]) - Number(jogoB[campoOrdenacao]);
+        return Number(jogoA[propriedade]) - Number(jogoB[propriedade]);
       });
     }
   }
@@ -131,6 +136,7 @@ export function buscarJogoPorId(req, res) {
 
 // POST /jogos -> cadastra um novo jogo
 export function cadastrarJogo(req, res) {
+  const body = req.body ?? {};
   const {
     titulo,
     genero,
@@ -143,7 +149,7 @@ export function cadastrarJogo(req, res) {
     classificacaoIndicativa,
     horasParaZerar,
     sinopse,
-  } = req.body;
+  } = body;
 
   const erroTitulo = validarCampoObrigatorio(req, res, "titulo", titulo);
   if (erroTitulo) {
@@ -160,7 +166,7 @@ export function cadastrarJogo(req, res) {
     return erroPlataforma;
   }
 
-  const erroCamposOpcionais = validarCamposOpcionais(req, res);
+  const erroCamposOpcionais = validarCamposOpcionais(body, res);
   if (erroCamposOpcionais) {
     return erroCamposOpcionais;
   }
@@ -190,6 +196,7 @@ export function cadastrarJogo(req, res) {
 
 // PATCH /jogos/:id -> edita um jogo existente
 export function editarJogo(req, res) {
+  const body = req.body ?? {};
   const id = Number(req.params.id);
   const jogo = jogos.find((j) => j.id === id);
 
@@ -209,14 +216,18 @@ export function editarJogo(req, res) {
     classificacaoIndicativa,
     horasParaZerar,
     sinopse,
-  } = req.body;
+  } = body;
+
+  const erroCamposOpcionais = validarCamposOpcionais(body, res);
+  if (erroCamposOpcionais) {
+    return erroCamposOpcionais;
+  }
 
   if (titulo !== undefined) {
     const erroTitulo = validarCampoObrigatorio(req, res, "titulo", titulo);
     if (erroTitulo) {
       return erroTitulo;
     }
-    jogo.titulo = titulo.trim();
   }
 
   if (genero !== undefined) {
@@ -224,7 +235,6 @@ export function editarJogo(req, res) {
     if (erroGenero) {
       return erroGenero;
     }
-    jogo.genero = genero.trim();
   }
 
   if (plataforma !== undefined) {
@@ -232,35 +242,14 @@ export function editarJogo(req, res) {
     if (erroPlataforma) {
       return erroPlataforma;
     }
-    jogo.plataforma = plataforma.trim();
   }
 
-  if (anoLancamento !== undefined) {
-    if (!Number.isInteger(anoLancamento) || anoLancamento < 1970 || anoLancamento > anoAtual + 1) {
-      return res.status(400).json({
-        erro: `O campo 'anoLancamento' deve ser um número inteiro entre 1970 e ${anoAtual + 1}.`,
-      });
-    }
-    jogo.anoLancamento = anoLancamento;
-  }
-
-  if (nota !== undefined) {
-    if (typeof nota !== "number" || Number.isNaN(nota) || nota < 0 || nota > 10) {
-      return res.status(400).json({
-        erro: "O campo 'nota' deve ser um número entre 0 e 10.",
-      });
-    }
-    jogo.nota = nota;
-  }
-
-  if (concluido !== undefined) {
-    if (typeof concluido !== "boolean") {
-      return res.status(400).json({
-        erro: "O campo 'concluido' deve ser um valor booleano (true ou false).",
-      });
-    }
-    jogo.concluido = concluido;
-  }
+  if (titulo !== undefined) jogo.titulo = titulo.trim();
+  if (genero !== undefined) jogo.genero = genero.trim();
+  if (plataforma !== undefined) jogo.plataforma = plataforma.trim();
+  if (anoLancamento !== undefined) jogo.anoLancamento = anoLancamento;
+  if (nota !== undefined) jogo.nota = nota;
+  if (concluido !== undefined) jogo.concluido = concluido;
 
   if (desenvolvedora !== undefined) jogo.desenvolvedora = desenvolvedora;
   if (distribuidora !== undefined) jogo.distribuidora = distribuidora;
