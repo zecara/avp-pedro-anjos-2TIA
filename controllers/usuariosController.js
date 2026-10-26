@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { usuarios, gerarProximoUsuarioId } from "../data/usuarios.js";
+import prisma from "../lib/prisma.js";
 
 const segredoJwt = process.env.JWT_SECRET;
 
@@ -18,24 +18,22 @@ export async function cadastrarUsuario(req, res) {
   }
 
   const emailNormalizado = email.trim().toLowerCase();
-  const emailExistente = usuarios.find(
-    (usuario) => usuario.email.toLowerCase() === emailNormalizado
-  );
-
-  if (emailExistente) {
-    return res.status(409).json({ erro: "E-mail já cadastrado." });
-  }
-
   const senhaCriptografada = await bcrypt.hash(senha, 10);
-
-  const novoUsuario = {
-    id: gerarProximoUsuarioId(),
-    nome: nome.trim(),
-    email: email.trim(),
-    senha: senhaCriptografada,
-  };
-
-  usuarios.push(novoUsuario);
+  let novoUsuario;
+  try {
+    novoUsuario = await prisma.usuario.create({
+      data: {
+        nome: nome.trim(),
+        email: emailNormalizado,
+        senha: senhaCriptografada,
+      },
+    });
+  } catch (error) {
+    if (error.code === "P2002") {
+      return res.status(409).json({ erro: "E-mail já cadastrado." });
+    }
+    throw error;
+  }
 
   return res.status(201).json({
     mensagem: "Usuário cadastrado com sucesso.",
@@ -77,9 +75,7 @@ export async function fazerLogin(req, res) {
   }
 
   const emailNormalizado = email.trim().toLowerCase();
-  const usuario = usuarios.find(
-    (item) => item.email.toLowerCase() === emailNormalizado
-  );
+  const usuario = await prisma.usuario.findUnique({ where: { email: emailNormalizado } });
 
   if (!usuario) {
     return res.status(401).json({ erro: "Credenciais inválidas." });

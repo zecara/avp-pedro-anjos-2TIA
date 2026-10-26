@@ -1,0 +1,36 @@
+// Prisma schema for the game catalog API.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Jogo {
+  id                      Int     @id @default(autoincrement())
+  titulo                  String  @db.VarChar(191)
+  genero                  String  @db.VarChar(100)
+  plataforma              String  @db.VarChar(100)
+  anoLancamento           Int?
+  nota                    Float?
+  concluido               Boolean @default(false)
+  desenvolvedora          String? @db.VarChar(191)
+  distribuidora           String? @db.VarChar(191)
+  classificacaoIndicativa String? @db.VarChar(20)
+  horasParaZerar          Int?
+  sinopse                 String? @db.Text
+
+  @@map("jogos")
+}
+
+model Usuario {
+  id    Int    @id @default(autoincrement())
+  nome  String @db.VarChar(191)
+  email String @unique @db.VarChar(191)
+  senha String @db.VarChar(255)
+
+  @@map("usuarios")
+}

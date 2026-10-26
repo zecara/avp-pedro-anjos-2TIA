@@ -1,6 +1,4 @@
-// Simulação de um banco de dados em memória.
-// Enquanto o servidor estiver rodando, os dados ficam armazenados aqui.
-// Quando o servidor for reiniciado, a lista volta ao estado inicial.
+// Dados iniciais inseridos no MySQL/MariaDB quando a tabela de jogos está vazia.
 
 export const jogos = [
   {
@@ -257,11 +255,3 @@ export const jogos = [
   },
 ];
 
-// Controla o próximo ID disponível para novos cadastros.
-let proximoId = jogos.length > 0 ? Math.max(...jogos.map((j) => j.id)) + 1 : 1;
-
-export function gerarProximoId() {
-  const id = proximoId;
-  proximoId += 1;
-  return id;
-}

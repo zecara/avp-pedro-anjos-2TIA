@@ -1,3 +1,4 @@
+import "dotenv/config";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -5,6 +6,40 @@ import { createServer } from "node:net";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
+const testDatabaseUrl = process.env.API_TEST_DATABASE_URL;
+
+function isDedicatedTestDatabase(testUrl, configuredUrl) {
+  if (!testUrl) return false;
+
+  try {
+    const target = new URL(testUrl);
+    if (target.protocol !== "mysql:") return false;
+
+    const databaseName = decodeURIComponent(target.pathname.replace(/^\//, ""));
+    if (!/(^|[-_])test($|[-_])/i.test(databaseName)) return false;
+
+    if (configuredUrl) {
+      const configured = new URL(configuredUrl);
+      const normalizeHost = (hostname) => ["localhost", "127.0.0.1", "::1"].includes(hostname.toLowerCase())
+        ? "loopback"
+        : hostname.toLowerCase();
+      const normalizePort = (url) => url.port || "3306";
+      const sameDatabase = normalizeHost(target.hostname) === normalizeHost(configured.hostname)
+        && normalizePort(target) === normalizePort(configured)
+        && decodeURIComponent(target.pathname) === decodeURIComponent(configured.pathname);
+      if (sameDatabase) return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const testDatabaseReady = isDedicatedTestDatabase(testDatabaseUrl, process.env.DATABASE_URL);
+const skipReason = testDatabaseReady
+  ? false
+  : "Defina API_TEST_DATABASE_URL para um schema MySQL separado cujo nome inclua 'test'; o banco configurado na aplicação não será usado pelos testes.";
 
 const obterPortaLivre = () => new Promise((resolve, reject) => {
   const server = createServer();
@@ -32,7 +67,12 @@ const waitForServer = async (url, logs, timeoutMs = 10000) => {
 const startServer = (port) => {
   const child = spawn("node", ["server.js"], {
     cwd: projectRoot,
-    env: { ...process.env, JWT_SECRET: "test-only-jwt-secret", PORT: String(port) },
+    env: {
+      ...process.env,
+      DATABASE_URL: testDatabaseUrl,
+      JWT_SECRET: "test-only-jwt-secret",
+      PORT: String(port),
+    },
     stdio: ["ignore", "pipe", "pipe"],
   });
 
@@ -43,9 +83,10 @@ const startServer = (port) => {
   return { child, logs };
 };
 
-test("login e proteção de rotas em /jogos", async () => {
+test("login e proteção de rotas em /jogos", { skip: skipReason }, async () => {
   const port = await obterPortaLivre();
   const baseUrl = `http://127.0.0.1:${port}`;
+  const emailTeste = `teste-${Date.now()}@teste.com`;
   const { child, logs } = startServer(port);
 
   try {
@@ -56,7 +97,7 @@ test("login e proteção de rotas em /jogos", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         nome: "Teste User",
-        email: "teste@teste.com",
+        email: emailTeste,
         senha: "123456",
       }),
     });
@@ -67,7 +108,7 @@ test("login e proteção de rotas em /jogos", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: "teste@teste.com",
+        email: emailTeste,
         senha: "123456",
       }),
     });
@@ -122,8 +163,16 @@ test("login e proteção de rotas em /jogos", async () => {
     const jogoOriginal = await jogoOriginalResponse.json();
     assert.equal(jogoOriginal.titulo, "Red Dead Redemption");
   } finally {
-    child.kill("SIGTERM");
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    if (!child.killed) child.kill("SIGKILL");
+    if (child.exitCode === null && !child.killed) child.kill("SIGTERM");
+    if (child.exitCode === null) {
+      await Promise.race([
+        new Promise((resolve) => child.once("exit", resolve)),
+        new Promise((resolve) => setTimeout(resolve, 2000)),
+      ]);
+    }
+    if (child.exitCode === null) {
+      child.kill("SIGKILL");
+      await new Promise((resolve) => child.once("exit", resolve));
+    }
   }
 });

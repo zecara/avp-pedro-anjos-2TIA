@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const uploadsDir = path.join(__dirname, "../uploads");
+export const uploadsDir = path.join(__dirname, "../uploads");
 
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -14,12 +14,17 @@ if (!fs.existsSync(uploadsDir)) {
 const storage = multer.diskStorage({
   destination: (_req, _file, callback) => callback(null, uploadsDir),
   filename: (_req, file, callback) => {
-    const extensao = path.extname(file.originalname).toLowerCase();
+    const extensao = extensoesPorTipo[file.mimetype];
     callback(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${extensao}`);
   },
 });
 
 const tiposPermitidos = ["image/jpeg", "image/png", "image/webp"];
+const extensoesPorTipo = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+};
 
 const fileFilter = (_req, file, callback) => {
   if (!tiposPermitidos.includes(file.mimetype)) {

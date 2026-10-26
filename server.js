@@ -6,8 +6,11 @@ import uploadRoutes from "./routes/uploadRoutes.js";
 import { configurarSwagger, swaggerSpec } from "./swagger.js";
 import { fazerLogin } from "./controllers/usuariosController.js";
 import { registrarLog } from "./middlewares/logMiddleware.js";
+import prisma from "./lib/prisma.js";
+import { jogos as jogosIniciais } from "./data/jogos.js";
+import { uploadsDir } from "./middlewares/uploadMiddleware.js";
 
-const app = express();
+export const app = express();
 const port = Number(process.env.PORT) || 3000;
 
 app.use(registrarLog);
@@ -64,11 +67,11 @@ app.use("/usuarios", usuariosRoutes);
 app.post("/login", fazerLogin);
 app.use("/jogos", jogosRoutes);
 app.use("/upload", uploadRoutes);
-app.use("/uploads", express.static("uploads"));
-configurarSwagger(app);
+app.use("/uploads", express.static(uploadsDir));
 app.get("/api-docs/swagger.json", (req, res) => {
   res.json(swaggerSpec);
 });
+configurarSwagger(app);
 
 app.use((req, res) => {
   res.status(404).json({ erro: "Rota não encontrada." });
@@ -102,7 +105,37 @@ app.use((error, req, res, next) => {
   return next();
 });
 
-app.listen(port, () => {
-  console.log(`Servidor rodando em http://localhost:${port}`);
-  console.log(`Documentação disponível em http://localhost:${port}/api-docs`);
-});
+export async function iniciarServidor() {
+  await prisma.$connect();
+
+  const quantidadeJogos = await prisma.jogo.count();
+  if (quantidadeJogos === 0 && jogosIniciais.length > 0) {
+    await prisma.jogo.createMany({
+      data: jogosIniciais.map(({ id, ...jogo }) => jogo),
+    });
+  }
+
+  const servidor = app.listen(port, () => {
+    console.log(`Servidor rodando em http://localhost:${port}`);
+    console.log(`Documentação disponível em http://localhost:${port}/api-docs`);
+  });
+
+  const encerrar = () => {
+    servidor.close(async () => {
+      await prisma.$disconnect();
+      process.exit(0);
+    });
+  };
+  process.once("SIGINT", encerrar);
+  process.once("SIGTERM", encerrar);
+
+  return servidor;
+}
+
+if (process.env.NODE_ENV !== "test") {
+  iniciarServidor().catch(async (error) => {
+    console.error("Não foi possível iniciar o servidor ou conectar ao banco:", error);
+    await prisma.$disconnect();
+    process.exitCode = 1;
+  });
+}

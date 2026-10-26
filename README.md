@@ -1,8 +1,8 @@
 # Catálogo de Jogos API
 
-API REST desenvolvida com **Node.js** e **Express** para gerenciar um catálogo
-de jogos com armazenamento **em memória**. O projeto inclui cadastro de
-usuários, login com token JWT, proteção de rotas, upload de imagens e
+API REST desenvolvida com **Node.js**, **Express** e **Prisma** para gerenciar
+um catálogo de jogos com armazenamento em **MySQL/MariaDB**. O projeto inclui
+cadastro de usuários, login com token JWT, proteção de rotas, upload de imagens e
 documentação interativa com Swagger.
 
 ## Tema do projeto
@@ -15,36 +15,50 @@ status de conclusão.
 
 - Node.js
 - Express 5
+- Prisma 6 com MySQL/MariaDB
 - JSON Web Token (`jsonwebtoken`)
 - Criptografia de senhas com `bcrypt`
 - Upload de arquivos com `multer`
 - Documentação com `swagger-jsdoc` e `swagger-ui-express`
-- Armazenamento em memória (array de objetos JavaScript)
 - Insomnia / Postman (para testes das rotas)
 
 ## Estrutura do projeto
 
+Os comandos da pasta acima do app são atalhos para este pacote. Todos os scripts
+Prisma deste projeto usam exclusivamente `avp-pedro-anjos-2TIA/prisma/schema.prisma`;
+a pasta `prisma/` da raiz do workspace fica fora do pacote e não é usada por eles.
+
 ```
 avp-pedro-anjos-2TIA/
+├── .env.example             # Modelo de configuração local
 ├── controllers/
-│   ├── jogosController.js   # Lógica do catálogo
-│   └── usuariosController.js # Cadastro e login
+│   ├── jogosController.js   # Regras e operações dos jogos
+│   └── usuariosController.js # Cadastro e autenticação
 ├── middlewares/
 │   ├── authMiddleware.js    # Validação do token JWT
 │   ├── logMiddleware.js     # Registro das requisições
 │   └── uploadMiddleware.js  # Validação do upload
 ├── data/
-│   ├── jogos.js              # Jogos e gerador de IDs
-│   └── usuarios.js           # Usuários e gerador de IDs
+│   └── jogos.js             # Dados iniciais do catálogo
 ├── routes/
-│   ├── jogosRoutes.js        # Rotas protegidas de /jogos
-│   ├── usuariosRoutes.js     # Rota de cadastro
-│   └── uploadRoutes.js        # Rota de upload
+│   ├── jogosRoutes.js        # Rotas de /jogos
+│   ├── usuariosRoutes.js     # Rotas de /usuarios
+│   └── uploadRoutes.js       # Rota de upload
+├── lib/
+│   ├── imageTypes.js         # Validação de assinaturas das imagens
+│   └── prisma.js             # Cliente Prisma compartilhado
+├── prisma/
+│   ├── schema.prisma         # Modelos Jogo e Usuario
+│   └── migrations/           # Histórico de alterações do banco
 ├── scripts/
-│   └── setup.js               # Gera configuração local segura
-├── server.js                 # Arquivo principal, inicia o servidor Express
-├── swagger.js                # Configuração da documentação OpenAPI
-├── .env.example
+│   └── setup.js              # Prepara .env sem sobrescrever dados existentes
+├── tests/
+│   ├── api.test.js           # Testes de integração (banco de teste separado)
+│   └── upload.test.js        # Testes unitários de imagem
+├── uploads/                  # Arquivos enviados, não versionados
+├── server.js                 # Configuração e inicialização do Express
+├── swagger.js                # Configuração OpenAPI/Swagger
+├── swagger.css               # Tema da documentação
 ├── package-lock.json
 ├── package.json
 └── README.md
@@ -52,24 +66,35 @@ avp-pedro-anjos-2TIA/
 
 ## Como executar o projeto
 
-Requisitos: Node.js 18 ou superior e npm.
+Requisitos: Node.js 18.18 ou superior e npm.
 
-1. Clone o repositório e entre na pasta:
+1. Clone o repositório e entre no pacote da API:
    ```bash
   git clone https://github.com/zecara/avp-pedro-anjos-2TIA.git
   cd avp-pedro-anjos-2TIA
    ```
 
-2. Instale exatamente as dependências registradas no lockfile e configure o
-  ambiente local:
+2. Instale as dependências e configure o ambiente local:
   ```bash
   npm ci
   npm run setup
   ```
-  O setup cria `.env` com uma chave JWT aleatória e não sobrescreve um arquivo
-  `.env` existente. Para configurar manualmente, use `.env.example` como base.
+  O setup cria uma chave JWT local e, quando disponível, copia a URL do banco
+  configurada na pasta do workspace. Ele preserva valores já existentes.
 
-3. Inicie o servidor:
+3. Edite `DATABASE_URL` no `.env` com os dados do MySQL/MariaDB, no formato
+  `mysql://usuario:senha@localhost:3306/nome_do_banco`. Gere o client e aplique
+  as migrações:
+  ```bash
+  npm run db:generate
+  npm run db:migrate
+  ```
+  **Atenção:** o histórico contém uma migração que renomeia a tabela antiga
+  `jogos` e outra que remove `jogos_legacy`. Se o banco tiver dados antigos que
+  precisam ser preservados, faça e teste um backup e revise o histórico antes
+  de migrar. Em uma tabela `jogos` vazia, o servidor insere os dados iniciais.
+
+4. Inicie o servidor dentro de `avp-pedro-anjos-2TIA`:
    ```bash
    npm start
    ```
@@ -78,11 +103,12 @@ Requisitos: Node.js 18 ou superior e npm.
    npm run dev
    ```
 
-4. O servidor estará disponível em:
+5. A API estará disponível em:
    ```
    http://localhost:3000
-   ```
-    Execute `npm test` para rodar os testes automatizados.
+  ```
+  `npm test` roda os testes. Na raiz do workspace, os scripts do `package.json`
+  também encaminham os comandos para este pacote.
 
 ## Estrutura de um jogo (objeto)
 
@@ -103,8 +129,8 @@ no corpo da requisição ao cadastrar um jogo.
 
 ## Jogos pré-cadastrados
 
-Ao iniciar, a API carrega 18 jogos no array em memória de
-`data/jogos.js`. A tabela abaixo mostra alguns deles:
+Ao iniciar pela primeira vez com uma tabela `jogos` vazia, a API insere os
+18 jogos iniciais definidos em `data/jogos.js`. A tabela abaixo mostra alguns:
 
 | Título                  | Gênero               | Plataforma | Ano |
 |-------------------------|----------------------|------------|-----|
@@ -119,8 +145,8 @@ Ao iniciar, a API carrega 18 jogos no array em memória de
 
 O projeto separa as responsabilidades por camadas: `routes/` define os
 endereços e métodos HTTP, `controllers/` concentra as regras de negócio,
-`middlewares/` cuida de autenticação, logs e upload, e `data/` mantém os dados
-em memória e os geradores de IDs. O `server.js` configura o Express, os
+`middlewares/` cuida de autenticação, logs e upload, e `lib/prisma.js` mantém
+a conexão com o banco. O Prisma persiste jogos e usuários. O `server.js` configura o Express, os
 middlewares globais e o agrupamento das rotas, enquanto `swagger.js` expõe a
 documentação OpenAPI.
 
@@ -131,7 +157,7 @@ documentação OpenAPI.
 | POST   | `/usuarios`             | Cadastra um usuário                        |
 | POST   | `/login`                | Autentica e retorna um token JWT            |
 | GET    | `/jogos`                | Lista todos os jogos cadastrados           |
-| GET    | `/jogos/estatisticas`   | Retorna um resumo dos dados em memória     |
+| GET    | `/jogos/estatisticas`   | Retorna um resumo dos dados no banco       |
 | GET    | `/jogos/:id`            | Consulta um jogo específico pelo ID        |
 | POST   | `/jogos`                | Cadastra um novo jogo                      |
 | PATCH  | `/jogos/:id`            | Edita um jogo existente                    |
@@ -164,7 +190,7 @@ campo `token`, válido por uma hora, que deve ser enviado nas rotas protegidas.
 
 Além dos dados brutos, esta rota aceita filtros e ordenação por query string:
 
-- `?genero=RPG` -> filtra por gênero de forma case-insensitive e parcial.
+- `?genero=RPG` -> filtra por gênero parcialmente (respeita a collation do banco).
 - `?concluido=true` ou `?concluido=false` -> filtra por status de conclusão.
 - `?ordenarPor=nota` -> ordena por `titulo`, `anoLancamento` ou `nota`.
 
@@ -199,7 +225,7 @@ acima.
 
 ### `GET /jogos/estatisticas`
 
-Retorna um resumo calculado a partir dos dados em memória.
+Retorna um resumo calculado a partir dos dados armazenados no banco.
 
 Exemplo de resposta:
 
@@ -306,8 +332,9 @@ Quando os campos opcionais não são enviados, `anoLancamento` e `nota` recebem
 ### `PATCH /jogos/:id`
 
 - Corpo da requisição: todos os campos são opcionais; somente os campos
-  enviados são alterados. Os campos aceitos são `titulo`, `genero`,
-  `plataforma`, `anoLancamento`, `nota` e `concluido`.
+  enviados são alterados. São aceitos `titulo`, `genero`, `plataforma`,
+  `anoLancamento`, `nota`, `concluido`, `desenvolvedora`, `distribuidora`,
+  `classificacaoIndicativa`, `horasParaZerar` e `sinopse`.
 - Sucesso: `200 OK`.
 - Erro: `404 Not Found` quando o ID não é encontrado.
 
@@ -465,13 +492,17 @@ http://localhost:3000/api-docs/swagger.json
 
 ## Observações
 
-- Os dados são armazenados apenas em memória (array), portanto são
-  perdidos sempre que o servidor é reiniciado.
+- Jogos e usuários ficam persistidos no MySQL/MariaDB e permanecem após
+  reiniciar o servidor.
 - Todas as respostas são retornadas em formato JSON.
 - O token JWT expira após uma hora. `JWT_SECRET` é criada localmente por
   `npm run setup`; não compartilhe nem versione o arquivo `.env`.
 - Uploads aceitam JPG/JPEG, PNG ou WEBP de até 2 MB e ficam disponíveis em
-  `/uploads`.
+  `/uploads`. O servidor valida a assinatura do arquivo, não apenas o MIME enviado.
+- Os testes de integração ficam desativados por padrão para impedir gravações
+  acidentais no banco normal. Para executá-los, configure `API_TEST_DATABASE_URL`
+  para um schema MySQL separado cujo nome contenha `test` (por exemplo,
+  `catalogo_test`).
 - Erros (ex: ID inexistente, campos obrigatórios faltando) retornam um
   código de status apropriado (`400`, `401`, `404` ou `409`) junto de uma mensagem
   explicativa.

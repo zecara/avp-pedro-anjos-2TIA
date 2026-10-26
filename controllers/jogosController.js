@@ -1,4 +1,4 @@
-import { jogos, gerarProximoId } from "../data/jogos.js";
+import prisma from "../lib/prisma.js";
 
 const anoAtual = new Date().getFullYear();
 
@@ -43,77 +43,57 @@ function validarCamposOpcionais(body, res) {
 }
 
 // GET /jogos -> lista todos os jogos cadastrados
-export function listarJogos(req, res) {
+export async function listarJogos(req, res) {
   const { genero, concluido: concluidoParam, ordenarPor } = req.query;
-
-  let jogosFiltrados = [...jogos];
+  const where = {};
 
   if (genero !== undefined && String(genero).trim() !== "") {
-    const termoGenero = String(genero).trim().toLowerCase();
-    jogosFiltrados = jogosFiltrados.filter((jogo) =>
-      typeof jogo.genero === "string" && jogo.genero.toLowerCase().includes(termoGenero)
-    );
+    where.genero = { contains: String(genero).trim() };
   }
 
   if (concluidoParam !== undefined) {
     const valorConcluido = String(concluidoParam).trim().toLowerCase();
 
     if (valorConcluido === "true" || valorConcluido === "false") {
-      const concluidoBoolean = valorConcluido === "true";
-      jogosFiltrados = jogosFiltrados.filter((jogo) => jogo.concluido === concluidoBoolean);
+      where.concluido = valorConcluido === "true";
     }
   }
 
-  if (ordenarPor !== undefined) {
-    const campoOrdenacao = String(ordenarPor).trim().toLowerCase();
-    const camposOrdenacaoValidos = {
-      titulo: "titulo",
-      anolancamento: "anoLancamento",
-      nota: "nota",
-    };
+  const camposOrdenacaoValidos = {
+    titulo: "titulo",
+    anolancamento: "anoLancamento",
+    nota: "nota",
+  };
+  const campoOrdenacao = String(ordenarPor ?? "").trim().toLowerCase();
+  const orderBy = camposOrdenacaoValidos[campoOrdenacao]
+    ? { [camposOrdenacaoValidos[campoOrdenacao]]: "asc" }
+    : undefined;
 
-    if (camposOrdenacaoValidos[campoOrdenacao]) {
-      const propriedade = camposOrdenacaoValidos[campoOrdenacao];
-      jogosFiltrados.sort((jogoA, jogoB) => {
-        if (propriedade === "titulo") {
-          return String(jogoA.titulo).localeCompare(String(jogoB.titulo));
-        }
-
-        return Number(jogoA[propriedade]) - Number(jogoB[propriedade]);
-      });
-    }
-  }
-
-  res.status(200).json(jogosFiltrados);
+  const jogos = await prisma.jogo.findMany({ where, orderBy });
+  return res.status(200).json(jogos);
 }
 
-export function listarEstatisticas(req, res) {
+export async function listarEstatisticas(req, res) {
+  const jogos = await prisma.jogo.findMany({
+    select: { concluido: true, nota: true, genero: true },
+  });
   const totalJogos = jogos.length;
-  const quantidadeConcluidos = jogos.filter((jogo) => jogo.concluido === true).length;
+  const quantidadeConcluidos = jogos.filter((jogo) => jogo.concluido).length;
   const quantidadeNaoConcluidos = totalJogos - quantidadeConcluidos;
-
-  const notasValidas = jogos
-    .filter((jogo) => typeof jogo.nota === "number" && !Number.isNaN(jogo.nota))
-    .map((jogo) => jogo.nota);
-
-  const somaNotas = notasValidas.reduce((total, nota) => total + nota, 0);
-  const notaMedia = notasValidas.length > 0 ? Number((somaNotas / notasValidas.length).toFixed(1)) : 0;
-
-  const contagemGeneros = jogos.reduce((acumulador, jogo) => {
-    const genero = typeof jogo.genero === "string" ? jogo.genero.trim() : "";
-
-    if (genero) {
-      acumulador[genero] = (acumulador[genero] || 0) + 1;
-    }
-
-    return acumulador;
+  const notasValidas = jogos.map((jogo) => jogo.nota).filter((nota) => nota !== null);
+  const notaMedia = notasValidas.length > 0
+    ? Number((notasValidas.reduce((total, nota) => total + nota, 0) / notasValidas.length).toFixed(1))
+    : 0;
+  const contagemGeneros = jogos.reduce((contagem, jogo) => {
+    const genero = jogo.genero.trim();
+    contagem[genero] = (contagem[genero] || 0) + 1;
+    return contagem;
   }, {});
-
   const generoMaisFrequente = Object.entries(contagemGeneros).length > 0
     ? Object.entries(contagemGeneros).sort((a, b) => b[1] - a[1])[0][0]
     : "N/A";
 
-  res.status(200).json({
+  return res.status(200).json({
     totalJogos,
     quantidadeConcluidos,
     quantidadeNaoConcluidos,
@@ -123,19 +103,19 @@ export function listarEstatisticas(req, res) {
 }
 
 // GET /jogos/:id -> consulta um jogo específico pelo ID
-export function buscarJogoPorId(req, res) {
+export async function buscarJogoPorId(req, res) {
   const id = Number(req.params.id);
-  const jogo = jogos.find((j) => j.id === id);
+  const jogo = Number.isInteger(id) ? await prisma.jogo.findUnique({ where: { id } }) : null;
 
   if (!jogo) {
     return res.status(404).json({ erro: `Jogo com ID ${id} não encontrado.` });
   }
 
-  res.status(200).json(jogo);
+  return res.status(200).json(jogo);
 }
 
 // POST /jogos -> cadastra um novo jogo
-export function cadastrarJogo(req, res) {
+export async function cadastrarJogo(req, res) {
   const body = req.body ?? {};
   const {
     titulo,
@@ -151,131 +131,118 @@ export function cadastrarJogo(req, res) {
     sinopse,
   } = body;
 
-  const erroTitulo = validarCampoObrigatorio(req, res, "titulo", titulo);
-  if (erroTitulo) {
-    return erroTitulo;
-  }
-
-  const erroGenero = validarCampoObrigatorio(req, res, "genero", genero);
-  if (erroGenero) {
-    return erroGenero;
-  }
-
-  const erroPlataforma = validarCampoObrigatorio(req, res, "plataforma", plataforma);
-  if (erroPlataforma) {
-    return erroPlataforma;
+  for (const [nomeCampo, valor] of Object.entries({ titulo, genero, plataforma })) {
+    const erro = validarCampoObrigatorio(req, res, nomeCampo, valor);
+    if (erro) return erro;
   }
 
   const erroCamposOpcionais = validarCamposOpcionais(body, res);
-  if (erroCamposOpcionais) {
-    return erroCamposOpcionais;
+  if (erroCamposOpcionais) return erroCamposOpcionais;
+
+  for (const campo of ["desenvolvedora", "distribuidora", "classificacaoIndicativa", "sinopse"]) {
+    if (body[campo] !== undefined && body[campo] !== null && typeof body[campo] !== "string") {
+      return res.status(400).json({ erro: `O campo '${campo}' deve ser uma string.` });
+    }
+  }
+  if (horasParaZerar !== undefined && horasParaZerar !== null && (!Number.isInteger(horasParaZerar) || horasParaZerar < 0)) {
+    return res.status(400).json({ erro: "O campo 'horasParaZerar' deve ser um inteiro não negativo." });
   }
 
-  const novoJogo = {
-    id: gerarProximoId(),
-    titulo: titulo.trim(),
-    genero: genero.trim(),
-    plataforma: plataforma.trim(),
-    anoLancamento: anoLancamento ?? null,
-    nota: nota ?? null,
-    concluido: concluido ?? false,
-    desenvolvedora: desenvolvedora ?? null,
-    distribuidora: distribuidora ?? null,
-    classificacaoIndicativa: classificacaoIndicativa ?? null,
-    horasParaZerar: horasParaZerar ?? null,
-    sinopse: sinopse ?? null,
-  };
-
-  jogos.push(novoJogo);
-
-  res.status(201).json({
-    mensagem: "Jogo cadastrado com sucesso.",
-    jogo: novoJogo,
+  const jogo = await prisma.jogo.create({
+    data: {
+      titulo: titulo.trim(),
+      genero: genero.trim(),
+      plataforma: plataforma.trim(),
+      anoLancamento: anoLancamento ?? null,
+      nota: nota ?? null,
+      concluido: concluido ?? false,
+      desenvolvedora: desenvolvedora ?? null,
+      distribuidora: distribuidora ?? null,
+      classificacaoIndicativa: classificacaoIndicativa ?? null,
+      horasParaZerar: horasParaZerar ?? null,
+      sinopse: sinopse ?? null,
+    },
   });
+
+  return res.status(201).json({ mensagem: "Jogo cadastrado com sucesso.", jogo });
 }
 
 // PATCH /jogos/:id -> edita um jogo existente
-export function editarJogo(req, res) {
+export async function editarJogo(req, res) {
   const body = req.body ?? {};
   const id = Number(req.params.id);
-  const jogo = jogos.find((j) => j.id === id);
-
-  if (!jogo) {
+  if (!Number.isInteger(id)) {
     return res.status(404).json({ erro: `Jogo com ID ${id} não encontrado.` });
   }
 
-  const {
-    titulo,
-    genero,
-    plataforma,
-    anoLancamento,
-    nota,
-    concluido,
-    desenvolvedora,
-    distribuidora,
-    classificacaoIndicativa,
-    horasParaZerar,
-    sinopse,
-  } = body;
+  const camposObrigatorios = ["titulo", "genero", "plataforma"];
+  for (const campo of camposObrigatorios) {
+    if (body[campo] !== undefined) {
+      const erro = validarCampoObrigatorio(req, res, campo, body[campo]);
+      if (erro) return erro;
+    }
+  }
 
   const erroCamposOpcionais = validarCamposOpcionais(body, res);
-  if (erroCamposOpcionais) {
-    return erroCamposOpcionais;
-  }
-
-  if (titulo !== undefined) {
-    const erroTitulo = validarCampoObrigatorio(req, res, "titulo", titulo);
-    if (erroTitulo) {
-      return erroTitulo;
+  if (erroCamposOpcionais) return erroCamposOpcionais;
+  for (const campo of ["desenvolvedora", "distribuidora", "classificacaoIndicativa", "sinopse"]) {
+    if (body[campo] !== undefined && body[campo] !== null && typeof body[campo] !== "string") {
+      return res.status(400).json({ erro: `O campo '${campo}' deve ser uma string.` });
     }
   }
-
-  if (genero !== undefined) {
-    const erroGenero = validarCampoObrigatorio(req, res, "genero", genero);
-    if (erroGenero) {
-      return erroGenero;
-    }
+  if (body.horasParaZerar !== undefined && body.horasParaZerar !== null
+    && (!Number.isInteger(body.horasParaZerar) || body.horasParaZerar < 0)) {
+    return res.status(400).json({ erro: "O campo 'horasParaZerar' deve ser um inteiro não negativo." });
   }
 
-  if (plataforma !== undefined) {
-    const erroPlataforma = validarCampoObrigatorio(req, res, "plataforma", plataforma);
-    if (erroPlataforma) {
-      return erroPlataforma;
-    }
+  const camposAtualizaveis = [
+    "titulo",
+    "genero",
+    "plataforma",
+    "anoLancamento",
+    "nota",
+    "concluido",
+    "desenvolvedora",
+    "distribuidora",
+    "classificacaoIndicativa",
+    "horasParaZerar",
+    "sinopse",
+  ];
+  const data = Object.fromEntries(
+    camposAtualizaveis
+      .filter((campo) => body[campo] !== undefined)
+      .map((campo) => [campo, body[campo]])
+  );
+  for (const campo of camposObrigatorios) {
+    if (data[campo] !== undefined) data[campo] = data[campo].trim();
   }
+  delete data.id;
 
-  if (titulo !== undefined) jogo.titulo = titulo.trim();
-  if (genero !== undefined) jogo.genero = genero.trim();
-  if (plataforma !== undefined) jogo.plataforma = plataforma.trim();
-  if (anoLancamento !== undefined) jogo.anoLancamento = anoLancamento;
-  if (nota !== undefined) jogo.nota = nota;
-  if (concluido !== undefined) jogo.concluido = concluido;
-
-  if (desenvolvedora !== undefined) jogo.desenvolvedora = desenvolvedora;
-  if (distribuidora !== undefined) jogo.distribuidora = distribuidora;
-  if (classificacaoIndicativa !== undefined) jogo.classificacaoIndicativa = classificacaoIndicativa;
-  if (horasParaZerar !== undefined) jogo.horasParaZerar = horasParaZerar;
-  if (sinopse !== undefined) jogo.sinopse = sinopse;
-
-  res.status(200).json({
-    mensagem: "Jogo atualizado com sucesso.",
-    jogo,
-  });
+  try {
+    const jogo = await prisma.jogo.update({ where: { id }, data });
+    return res.status(200).json({ mensagem: "Jogo atualizado com sucesso.", jogo });
+  } catch (error) {
+    if (error.code === "P2025") {
+      return res.status(404).json({ erro: `Jogo com ID ${id} não encontrado.` });
+    }
+    throw error;
+  }
 }
 
 // DELETE /jogos/:id -> remove um jogo pelo ID
-export function excluirJogo(req, res) {
+export async function excluirJogo(req, res) {
   const id = Number(req.params.id);
-  const indice = jogos.findIndex((j) => j.id === id);
-
-  if (indice === -1) {
+  if (!Number.isInteger(id)) {
     return res.status(404).json({ erro: `Jogo com ID ${id} não encontrado.` });
   }
 
-  const [jogoRemovido] = jogos.splice(indice, 1);
-
-  res.status(200).json({
-    mensagem: "Jogo removido com sucesso.",
-    jogo: jogoRemovido,
-  });
+  try {
+    const jogo = await prisma.jogo.delete({ where: { id } });
+    return res.status(200).json({ mensagem: "Jogo removido com sucesso.", jogo });
+  } catch (error) {
+    if (error.code === "P2025") {
+      return res.status(404).json({ erro: `Jogo com ID ${id} não encontrado.` });
+    }
+    throw error;
+  }
 }
