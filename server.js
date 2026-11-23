@@ -1,37 +1,39 @@
-import "dotenv/config";
-import express from "express";
-import jogosRoutes from "./routes/jogosRoutes.js";
-import usuariosRoutes from "./routes/usuariosRoutes.js";
-import uploadRoutes from "./routes/uploadRoutes.js";
-import { configurarSwagger, swaggerSpec } from "./swagger.js";
-import { fazerLogin } from "./controllers/usuariosController.js";
-import { registrarLog } from "./middlewares/logMiddleware.js";
-import prisma from "./lib/prisma.js";
-import { jogos as jogosIniciais } from "./data/jogos.js";
-import { uploadsDir } from "./middlewares/uploadMiddleware.js";
+import 'dotenv/config';
+import cors from 'cors';
+import express from 'express';
+import jogosRoutes from './routes/jogosRoutes.js';
+import usuariosRoutes from './routes/usuariosRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
+import { configurarSwagger, swaggerSpec } from './swagger.js';
+import { fazerLogin } from './controllers/usuariosController.js';
+import { registrarLog } from './middlewares/logMiddleware.js';
+import prisma from './lib/prisma.js';
+import { jogos as jogosIniciais } from './data/jogos.js';
+import { uploadsDir } from './middlewares/uploadMiddleware.js';
 
 export const app = express();
 const port = Number(process.env.PORT) || 3000;
 
+app.use(cors());
 app.use(registrarLog);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get("/", (req, res) => {
+app.get('/', (req, res) => {
   res.json({
-    mensagem: "API do Catálogo de Jogos está no ar!",
-    disciplina: "Desenvolvimento de Websites",
+    mensagem: 'API do Catálogo de Jogos está no ar!',
+    disciplina: 'Desenvolvimento de Websites',
     rotasDisponiveis: [
-      "POST   /usuarios",
-      "POST   /login",
-      "GET    /jogos",
-      "GET    /jogos/estatisticas",
-      "GET    /jogos/:id",
-      "POST   /jogos",
-      "PATCH  /jogos/:id",
-      "DELETE /jogos/:id",
-      "POST   /upload",
-      "GET    /api-docs",
+      'POST   /usuarios',
+      'POST   /login',
+      'GET    /jogos',
+      'GET    /jogos/estatisticas',
+      'GET    /jogos/:id',
+      'POST   /jogos',
+      'PATCH  /jogos/:id',
+      'DELETE /jogos/:id',
+      'POST   /upload',
+      'GET    /api-docs',
     ],
   });
 });
@@ -63,43 +65,43 @@ app.get("/", (req, res) => {
  *       401:
  *         description: E-mail ou senha inválidos
  */
-app.use("/usuarios", usuariosRoutes);
-app.post("/login", fazerLogin);
-app.use("/jogos", jogosRoutes);
-app.use("/upload", uploadRoutes);
-app.use("/uploads", express.static(uploadsDir));
-app.get("/api-docs/swagger.json", (req, res) => {
+app.use('/usuarios', usuariosRoutes);
+app.post('/login', fazerLogin);
+app.use('/jogos', jogosRoutes);
+app.use('/upload', uploadRoutes);
+app.use('/uploads', express.static(uploadsDir));
+app.get('/api-docs/swagger.json', (req, res) => {
   res.json(swaggerSpec);
 });
 configurarSwagger(app);
 
 app.use((req, res) => {
-  res.status(404).json({ erro: "Rota não encontrada." });
+  res.status(404).json({ erro: 'Rota não encontrada.' });
 });
 
 app.use((error, req, res, next) => {
   if (error) {
-    if (error.type === "entity.parse.failed") {
-      return res.status(400).json({ erro: "O corpo da requisição contém JSON inválido." });
+    if (error.type === 'entity.parse.failed') {
+      return res.status(400).json({ erro: 'O corpo da requisição contém JSON inválido.' });
     }
 
-    if (error.type === "entity.too.large") {
-      return res.status(413).json({ erro: "O corpo da requisição é muito grande." });
+    if (error.type === 'entity.too.large') {
+      return res.status(413).json({ erro: 'O corpo da requisição é muito grande.' });
     }
 
-    if (error.name === "MulterError") {
-      if (error.code === "LIMIT_FILE_SIZE") {
-        return res.status(400).json({ erro: "Arquivo muito grande. O tamanho máximo é 2MB." });
+    if (error.name === 'MulterError') {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ erro: 'Arquivo muito grande. O tamanho máximo é 2MB.' });
       }
       return res.status(400).json({ erro: `Erro no upload: ${error.message}` });
     }
 
-    if (error.message?.includes("Tipo de arquivo inválido")) {
+    if (error.message?.includes('Tipo de arquivo inválido')) {
       return res.status(400).json({ erro: error.message });
     }
 
     console.error(error);
-    return res.status(500).json({ erro: "Erro interno do servidor." });
+    return res.status(500).json({ erro: 'Erro interno do servidor.' });
   }
 
   return next();
@@ -126,15 +128,15 @@ export async function iniciarServidor() {
       process.exit(0);
     });
   };
-  process.once("SIGINT", encerrar);
-  process.once("SIGTERM", encerrar);
+  process.once('SIGINT', encerrar);
+  process.once('SIGTERM', encerrar);
 
   return servidor;
 }
 
-if (process.env.NODE_ENV !== "test") {
+if (process.env.NODE_ENV !== 'test') {
   iniciarServidor().catch(async (error) => {
-    console.error("Não foi possível iniciar o servidor ou conectar ao banco:", error);
+    console.error('Não foi possível iniciar o servidor ou conectar ao banco:', error);
     await prisma.$disconnect();
     process.exitCode = 1;
   });

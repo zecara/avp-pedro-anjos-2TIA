@@ -110,6 +110,39 @@ Requisitos: Node.js 18.18 ou superior e npm.
   `npm test` roda os testes. Na raiz do workspace, os scripts do `package.json`
   também encaminham os comandos para este pacote.
 
+## Como Executar a Aplicação (Backend + Frontend)
+
+### 1. Backend (API Node.js)
+
+Na pasta `avp-pedro-anjos-2TIA`, instale as dependências, configure o ambiente
+local e inicie a API:
+
+```bash
+npm install
+npm run setup
+npm run db:generate
+npm run db:migrate
+npm start
+```
+
+Antes de migrar, configure `DATABASE_URL` no arquivo `.env` para apontar para
+um banco MySQL/MariaDB. O comando `npm run db:migrate` usa o schema deste
+projeto em `prisma/schema.prisma`. A API iniciará na porta `3000`.
+
+### 2. Frontend (Interface React)
+
+Em um segundo terminal, a partir da raiz do workspace, entre na pasta do
+frontend e inicie o Vite:
+
+```bash
+cd backend/frontend
+npm install
+npm run dev
+```
+
+Acesse a interface no navegador pelo endereço indicado pelo Vite (por exemplo,
+`http://localhost:5173`).
+
 ## Estrutura de um jogo (objeto)
 
 ```json
